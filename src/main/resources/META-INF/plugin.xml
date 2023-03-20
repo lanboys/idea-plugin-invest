@@ -5,17 +5,16 @@
 
     <!-- Public plugin name should be written in Title Case.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-name -->
-    <name>Idea-plugin-invest</name>
+    <name>invest</name>
 
     <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
-    <vendor email="support@yourcompany.com" url="https://www.yourcompany.com">YourCompany</vendor>
+    <vendor email="oopcoder@163.com" url="https://www.oopcoder.cn">OOPcoder</vendor>
 
     <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
          Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
     <description><![CDATA[
-    Enter short description for your plugin here.<br>
-    <em>most HTML tags may be used</em>
+    投资助手
   ]]></description>
 
     <!-- Product and plugin compatibility requirements.
@@ -25,6 +24,12 @@
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
-
+        <notificationGroup id="holdingMonitoringGroup" displayType="NONE" isLogByDefault="true" />
     </extensions>
+    <actions>
+        <action id="holdingMonitoring" class="com.bing.lan.invest.action.HoldingMonitoringAction" text="Enable Monitoring"
+                description="Enable monitoring of my invest holding ">
+            <add-to-group group-id="ToolsMenu" anchor="first"/>
+        </action>
+    </actions>
 </idea-plugin>
