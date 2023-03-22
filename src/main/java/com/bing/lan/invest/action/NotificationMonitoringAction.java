@@ -1,6 +1,9 @@
 package com.bing.lan.invest.action;
 
+import com.bing.lan.invest.domain.BaseIDEAMessage;
 import com.bing.lan.invest.domain.MessageList;
+import com.bing.lan.invest.domain.message.HuabaoMessage;
+import com.bing.lan.invest.domain.message.WeiboMessage;
 import com.google.gson.Gson;
 import com.intellij.notification.Notification;
 import com.intellij.notification.NotificationGroupManager;
@@ -21,15 +24,16 @@ import java.util.concurrent.*;
 /**
  * Created by lanbing at 2023/3/20 9:28
  */
-public class HoldingMonitoringAction extends AnAction {
+public class NotificationMonitoringAction extends AnAction {
 
     private ScheduledExecutorService scheduledExecutorService;
 
     private volatile boolean runFlag = false;
-
+    private volatile long period = 10;
     private static Gson gson = new Gson();
     private static HttpClient httpClient = HttpClients.createDefault();
 
+    private static List<Long> exist = new ArrayList<>();
     int times = 0;
 
     @Override
@@ -50,22 +54,37 @@ public class HoldingMonitoringAction extends AnAction {
                 HttpResponse response = httpClient.execute(request);
                 String responseBody = EntityUtils.toString(response.getEntity());
                 MessageList bean = gson.fromJson(responseBody, MessageList.class);
-                List<String> list = bean.getList();
-                for (int i = 0; i < list.size(); i++) {
-                    notifyMe("attention", list.get(i));
+                period = bean.getPeriod();
+                if (period <= 0) {
+                    period = 10;
                 }
+                List<HuabaoMessage> huabaoMessages = bean.getHuabaoMessages();
+                for (int i = 0; i < huabaoMessages.size(); i++) {
+                    HuabaoMessage huabaoMessage = huabaoMessages.get(i);
+                    notifyMe(huabaoMessage, huabaoMessage.getText());
+                }
+                List<WeiboMessage> etfWeiboMessages = bean.getWeiboMessages();
+                etfWeiboMessages.stream().filter(weiboMessage -> {
+                    if (exist.contains(weiboMessage.getId())) {
+                        return false;
+                    }
+                    exist.add(weiboMessage.getId());
+                    return true;
+                }).forEach(weiboMessage -> notifyMe(weiboMessage, weiboMessage.getText()));
+
                 times++;
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
 
-        }, 0, 10, TimeUnit.SECONDS);
+        }, 0, period, TimeUnit.SECONDS);
     }
 
-    public static void notifyMe(String title, String text) {
+    public static void notifyMe(BaseIDEAMessage baseIDEAMessage, String text) {
+
         Notification holdingMonitoringGroup = NotificationGroupManager.getInstance()
-                .getNotificationGroup("holdingMonitoringGroup")
-                .createNotification(title, text, NotificationType.INFORMATION);
+                .getNotificationGroup(baseIDEAMessage.getNotificationGroupId())
+                .createNotification(baseIDEAMessage.getTitle(), text, NotificationType.INFORMATION);
         Notifications.Bus.notify(holdingMonitoringGroup);
     }
 }

@@ -24,11 +24,12 @@
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
-        <notificationGroup id="holdingMonitoringGroup" displayType="NONE" isLogByDefault="true" />
+        <notificationGroup id="noDisplayGroup" displayType="NONE" isLogByDefault="true" />
+        <notificationGroup id="displayGroup" displayType="BALLOON" isLogByDefault="true" />
     </extensions>
     <actions>
-        <action id="holdingMonitoring" class="com.bing.lan.invest.action.HoldingMonitoringAction" text="Enable Monitoring"
-                description="Enable monitoring of my invest holding ">
+        <action id="holdingMonitoring" class="com.bing.lan.invest.action.NotificationMonitoringAction" text="Enable Monitoring"
+                description="Enable monitoring of notifications">
             <add-to-group group-id="ToolsMenu" anchor="first"/>
         </action>
     </actions>
