@@ -1,6 +1,5 @@
 package com.bing.lan.invest.domain;
 
-import com.bing.lan.invest.domain.message.HuabaoMessage;
 import com.bing.lan.invest.domain.message.WeiboMessage;
 
 import java.util.*;
@@ -13,7 +12,7 @@ public class MessageList {
 
     private long period;
 
-    private List<HuabaoMessage> huabaoMessages;
+    private List<BaseIDEAMessage> messages;
 
     private List<WeiboMessage> weiboMessages;
 
@@ -25,12 +24,12 @@ public class MessageList {
         this.period = period;
     }
 
-    public List<HuabaoMessage> getHuabaoMessages() {
-        return huabaoMessages;
+    public List<BaseIDEAMessage> getMessages() {
+        return messages;
     }
 
-    public void setHuabaoMessages(List<HuabaoMessage> huabaoMessages) {
-        this.huabaoMessages = huabaoMessages;
+    public void setMessages(List<BaseIDEAMessage> messages) {
+        this.messages = messages;
     }
 
     public List<WeiboMessage> getWeiboMessages() {

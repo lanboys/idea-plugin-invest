@@ -2,8 +2,8 @@ package com.bing.lan.invest.action;
 
 import com.bing.lan.invest.domain.BaseIDEAMessage;
 import com.bing.lan.invest.domain.MessageList;
-import com.bing.lan.invest.domain.message.HuabaoMessage;
 import com.bing.lan.invest.domain.message.WeiboMessage;
+import com.bing.lan.invest.util.DateTimeUtil;
 import com.google.gson.Gson;
 import com.intellij.notification.Notification;
 import com.intellij.notification.NotificationGroupManager;
@@ -26,30 +26,58 @@ import java.util.concurrent.*;
  */
 public class NotificationMonitoringAction extends AnAction {
 
-    private ScheduledExecutorService scheduledExecutorService;
-
+    private volatile ScheduledExecutorService scheduledExecutorService;
     private volatile boolean runFlag = false;
     private volatile long period = 10;
-    private static Gson gson = new Gson();
-    private static HttpClient httpClient = HttpClients.createDefault();
+    private Gson gson = new Gson();
+    private HttpClient httpClient = HttpClients.createDefault();
 
-    private static List<Long> exist = new ArrayList<>();
-    int times = 0;
+    private List<Long> exist = new ArrayList<>();
+    private int times = 0;
+    private String defaultGroupId = "displayGroup";
+
+    private Integer[] monitoringPeriod = new Integer[]{8, 50, 15, 30};
 
     @Override
     public void actionPerformed(AnActionEvent e) {
+        if (!DateTimeUtil.currentTimeIn(monitoringPeriod)) {
+            notifyMe(defaultGroupId, "Warn",
+                    "The monitoring can only be enabled" + getMonitoringPeriodString(), NotificationType.WARNING);
+            return;
+        }
+
+        // close
         if (runFlag) {
-            scheduledExecutorService.shutdown();
+            if (scheduledExecutorService != null) {
+                scheduledExecutorService.shutdown();
+            }
             scheduledExecutorService = null;
             runFlag = false;
             return;
         }
 
+        // open
         times = 0;
         runFlag = true;
+        if (scheduledExecutorService != null) {
+            scheduledExecutorService.shutdown();
+        }
         scheduledExecutorService = Executors.newScheduledThreadPool(1);
         scheduledExecutorService.scheduleAtFixedRate(() -> {
             try {
+                if (!DateTimeUtil.currentTimeIn(monitoringPeriod)) {
+                    notifyMe(defaultGroupId, "Warn",
+                            "The monitoring has stopped automatically not" + getMonitoringPeriodString(),
+                            NotificationType.WARNING);
+
+                    if (scheduledExecutorService != null) {
+                        scheduledExecutorService.shutdown();
+                    }
+                    scheduledExecutorService = null;
+                    runFlag = false;
+                    return;
+                }
+
                 HttpGet request = new HttpGet("http://localhost:6666/invest/api/idea/messages?times=" + times);
                 HttpResponse response = httpClient.execute(request);
                 String responseBody = EntityUtils.toString(response.getEntity());
@@ -58,33 +86,55 @@ public class NotificationMonitoringAction extends AnAction {
                 if (period <= 0) {
                     period = 10;
                 }
-                List<HuabaoMessage> huabaoMessages = bean.getHuabaoMessages();
-                for (int i = 0; i < huabaoMessages.size(); i++) {
-                    HuabaoMessage huabaoMessage = huabaoMessages.get(i);
-                    notifyMe(huabaoMessage, huabaoMessage.getText());
+                List<BaseIDEAMessage> messages = bean.getMessages();
+                for (int i = 0; i < messages.size(); i++) {
+                    BaseIDEAMessage ideaMessage = messages.get(i);
+                    notifyMe(ideaMessage.getNotificationGroupId(), ideaMessage.getTitle(), ideaMessage.getText(),
+                            NotificationType.INFORMATION);
                 }
-                List<WeiboMessage> etfWeiboMessages = bean.getWeiboMessages();
-                etfWeiboMessages.stream().filter(weiboMessage -> {
+                List<WeiboMessage> weiboMessages = bean.getWeiboMessages();
+                weiboMessages.stream().filter(weiboMessage -> {
                     if (exist.contains(weiboMessage.getId())) {
                         return false;
                     }
                     exist.add(weiboMessage.getId());
                     return true;
-                }).forEach(weiboMessage -> notifyMe(weiboMessage, weiboMessage.getText()));
+                }).forEach(weiboMessage ->
+                        notifyMe(weiboMessage.getNotificationGroupId(),
+                                weiboMessage.getTitle(),
+                                weiboMessage.getText(),
+                                NotificationType.INFORMATION));
 
                 times++;
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
 
-        }, 0, period, TimeUnit.SECONDS);
+        }, 5, period, TimeUnit.SECONDS);
+
+        notifyMe(defaultGroupId, "Success", "Monitoring enabled successfully", NotificationType.INFORMATION);
     }
 
-    public static void notifyMe(BaseIDEAMessage baseIDEAMessage, String text) {
-
+    private static void notifyMe(String groupId, String title, String text, NotificationType information) {
         Notification holdingMonitoringGroup = NotificationGroupManager.getInstance()
-                .getNotificationGroup(baseIDEAMessage.getNotificationGroupId())
-                .createNotification(baseIDEAMessage.getTitle(), text, NotificationType.INFORMATION);
+                .getNotificationGroup(groupId)
+                .createNotification(title, text, information);
         Notifications.Bus.notify(holdingMonitoringGroup);
+    }
+
+    private String getMonitoringPeriodString() {
+        if (monitoringPeriod == null || monitoringPeriod.length != 4) {
+            return "";
+        }
+        StringBuilder builder = new StringBuilder();
+        builder.append(" between ")
+                .append(monitoringPeriod[0])
+                .append(":")
+                .append(monitoringPeriod[1])
+                .append(" and ")
+                .append(monitoringPeriod[2])
+                .append(":")
+                .append(monitoringPeriod[3]);
+        return builder.toString();
     }
 }
