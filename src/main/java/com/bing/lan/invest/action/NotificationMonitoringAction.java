@@ -34,20 +34,23 @@ public class NotificationMonitoringAction extends AnAction {
 
     private List<Long> exist = new ArrayList<>();
     private int times = 0;
-    private String defaultGroupId = "displayGroup";
+    private String displayGroupId = "displayGroup";
+
+    private String noDisplayGroupId = "noDisplayGroup";
 
     private Integer[] monitoringPeriod = new Integer[]{8, 50, 15, 30};
 
     @Override
     public void actionPerformed(AnActionEvent e) {
         if (!DateTimeUtil.currentTimeIn(monitoringPeriod)) {
-            notifyMe(defaultGroupId, "Warn",
+            notifyMe(displayGroupId, "Warn",
                     "The monitoring can only be enabled" + getMonitoringPeriodString(), NotificationType.WARNING);
             return;
         }
 
         // close
         if (runFlag) {
+            notifyMe(displayGroupId, "Success", "Monitoring disabled successfully", NotificationType.INFORMATION);
             if (scheduledExecutorService != null) {
                 scheduledExecutorService.shutdown();
             }
@@ -66,10 +69,9 @@ public class NotificationMonitoringAction extends AnAction {
         scheduledExecutorService.scheduleAtFixedRate(() -> {
             try {
                 if (!DateTimeUtil.currentTimeIn(monitoringPeriod)) {
-                    notifyMe(defaultGroupId, "Warn",
+                    notifyMe(displayGroupId, "Warn",
                             "The monitoring has stopped automatically not" + getMonitoringPeriodString(),
                             NotificationType.WARNING);
-
                     if (scheduledExecutorService != null) {
                         scheduledExecutorService.shutdown();
                     }
@@ -87,8 +89,11 @@ public class NotificationMonitoringAction extends AnAction {
                     period = 10;
                 }
                 List<BaseIDEAMessage> messages = bean.getMessages();
-                for (int i = 0; i < messages.size(); i++) {
-                    BaseIDEAMessage ideaMessage = messages.get(i);
+                if (messages.isEmpty()) {
+                    notifyMe(noDisplayGroupId, "Warn",
+                            "No data is returned from the server", NotificationType.WARNING);
+                }
+                for (BaseIDEAMessage ideaMessage : messages) {
                     notifyMe(ideaMessage.getNotificationGroupId(), ideaMessage.getTitle(), ideaMessage.getText(),
                             NotificationType.INFORMATION);
                 }
@@ -104,15 +109,17 @@ public class NotificationMonitoringAction extends AnAction {
                                 weiboMessage.getTitle(),
                                 weiboMessage.getText(),
                                 NotificationType.INFORMATION));
-
                 times++;
             } catch (Exception ex) {
                 ex.printStackTrace();
+                notifyMe(displayGroupId, "Warn",
+                        "Throwing exception , please check your program, the exception is: " + ex.getLocalizedMessage(),
+                        NotificationType.WARNING);
             }
 
-        }, 5, period, TimeUnit.SECONDS);
+        }, 0, period, TimeUnit.SECONDS);
 
-        notifyMe(defaultGroupId, "Success", "Monitoring enabled successfully", NotificationType.INFORMATION);
+        notifyMe(displayGroupId, "Success", "Monitoring enabled successfully", NotificationType.INFORMATION);
     }
 
     private static void notifyMe(String groupId, String title, String text, NotificationType information) {

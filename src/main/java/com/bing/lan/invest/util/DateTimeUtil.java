@@ -16,7 +16,7 @@ public class DateTimeUtil {
     }
 
     // cn.hutool.core.date.DateUtil.isIn
-    public static boolean currentTimeIn(int startHour, int startMinute, int endHour, int endMinute) {
+    private static boolean currentTimeIn(int startHour, int startMinute, int endHour, int endMinute) {
         LocalTime currentTime = LocalTime.now();
         LocalTime startTime = LocalTime.of(startHour, startMinute);
         LocalTime endTime = LocalTime.of(endHour, endMinute);
